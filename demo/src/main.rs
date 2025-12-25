@@ -1,5 +1,10 @@
 use pjsua::*;
-use std::{ffi::CString, mem::MaybeUninit, os::raw::c_int, ptr};
+use std::{
+    ffi::{CStr, CString},
+    mem::MaybeUninit,
+    os::raw::c_int,
+    ptr,
+};
 
 const CSTRING_NEW_FAILED: &str = "CString::new failed!";
 
@@ -7,40 +12,63 @@ const SIP_DOMAIN: &str = "test.u.biztel.jp";
 const SIP_USER: &str = "1001";
 const SIP_PASSWD: &str = "p@ssw0rd";
 
-const LOG_LEVEL_1: i32 = 1;
-const LOG_LEVEL_2: i32 = 2;
-const LOG_LEVEL_3: i32 = 3;
-const LOG_LEVEL_4: i32 = 4;
-const LOG_LEVEL_5: i32 = 5;
+enum LogLevel {
+    LogLevel1 = 0,
+    LogLevel2 = 1,
+    LogLevel3 = 2,
+    LogLevel4 = 3,
+    LogLevel5 = 4,
+}
 
-fn print_log(level: i32, msg: &str) {
+/**
+ * print_log
+ */
+fn print_log(level: LogLevel, msg: &str) {
     let cmsg = CString::new(msg).expect("CSTRING_NEW_FAILED");
     let dummfmt = CString::new("").expect("CSTRING_NEW_FAILED");
     let file = CString::new("APP").expect("CSTRING_NEW_FAILED");
     unsafe {
         match level {
-            LOG_LEVEL_1 => pj_log_1(file.as_ptr(), cmsg.as_ptr(), dummfmt.as_ptr()),
-            LOG_LEVEL_2 => pj_log_2(file.as_ptr(), cmsg.as_ptr(), dummfmt.as_ptr()),
-            LOG_LEVEL_3 => pj_log_3(file.as_ptr(), cmsg.as_ptr(), dummfmt.as_ptr()),
-            LOG_LEVEL_4 => pj_log_4(file.as_ptr(), cmsg.as_ptr(), dummfmt.as_ptr()),
-            LOG_LEVEL_5 => pj_log_5(file.as_ptr(), cmsg.as_ptr(), dummfmt.as_ptr()),
+            LogLevel::LogLevel1 => pj_log_1(file.as_ptr(), cmsg.as_ptr(), dummfmt.as_ptr()),
+            LogLevel::LogLevel2 => pj_log_2(file.as_ptr(), cmsg.as_ptr(), dummfmt.as_ptr()),
+            LogLevel::LogLevel3 => pj_log_3(file.as_ptr(), cmsg.as_ptr(), dummfmt.as_ptr()),
+            LogLevel::LogLevel4 => pj_log_4(file.as_ptr(), cmsg.as_ptr(), dummfmt.as_ptr()),
+            LogLevel::LogLevel5 => pj_log_5(file.as_ptr(), cmsg.as_ptr(), dummfmt.as_ptr()),
             _ => (),
         };
     }
 }
 
-/* Callback called by the library upon receiving incoming call */
-pub unsafe extern "C" fn on_incoming_call(
+/**
+ * Callback called by the library upon receiving incoming call
+ */
+pub extern "C" fn on_incoming_call(
     _acc_id: pjsua_acc_id,
     call_id: pjsua_call_id,
     _rdata: *mut pjsip_rx_data,
 ) {
-    print_log(LOG_LEVEL_1, "@@@@@@@@@ INCOMING! @@@@@@@@@@@@@@");
+    print_log(LogLevel::LogLevel1, "@@@@@@@@@ INCOMING! @@@@@@@@@@@@@@");
     let mut ci = MaybeUninit::<pjsua_call_info>::uninit();
-    pjsua_call_get_info(call_id, ci.as_mut_ptr());
+    unsafe {
+        pjsua_call_get_info(call_id, ci.as_mut_ptr());
 
-    /* Automatically answer incoming calls with 200/OK */
-    pjsua_call_answer(call_id, 200, ptr::null(), ptr::null());
+        /* Automatically answer incoming calls with 200/OK */
+        pjsua_call_answer(call_id, 200, ptr::null(), ptr::null());
+    }
+}
+
+fn on_call_state(call_id: pjsua_call_id, e: *mut pjsip_event) {
+    let mut ci = MaybeUninit::<pjsua_call_info>::uninit();
+    unsafe {
+        pjsua_call_get_info(call_id, ci.as_mut_ptr());
+        let state_text = CStr::from_ptr((*ci.as_mut_ptr()).state_text.ptr)
+            .to_str()
+            .expect("CSTRING ERROR!");
+        print_log(
+            LogLevel::LogLevel1,
+            &format!("Call {} sate={}", call_id, state_text),
+        );
+    }
 }
 
 fn main() {
@@ -112,11 +140,7 @@ fn main() {
             acc_id.as_mut_ptr(),
         );
 
-        print_log(5, "@@@@@@@@@@@@ sleeping....");
-
         pj_thread_sleep(10000);
-
-        print_log(5, "@@@@@@@@@@@@ wake....");
 
         /* Destroy pjsua */
         pjsua_destroy();
