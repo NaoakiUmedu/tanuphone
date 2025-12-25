@@ -1,9 +1,11 @@
 use pjsua::*;
 use std::{
-    ffi::{CStr, CString},
+    ffi::{c_void, CStr, CString},
     mem::MaybeUninit,
-    os::raw::c_int,
-    ptr,
+    os::{raw::c_int, unix::raw::pthread_t},
+    process::exit,
+    ptr::{self, null},
+    thread::sleep,
 };
 
 const CSTRING_NEW_FAILED: &str = "CString::new failed!";
@@ -18,6 +20,16 @@ enum LogLevel {
     LogLevel3 = 2,
     LogLevel4 = 3,
     LogLevel5 = 4,
+}
+
+fn error_exit(msg: &str, status: pj_status_t) {
+    unsafe {
+        let file = CString::new("APP").expect("CSTRING_NEW_FAILED");
+        let cmsg = CString::new(msg).expect("CSTRING_NEW_FAILED");
+        pjsua_perror(file.as_ptr(), cmsg.as_ptr(), status);
+        pjsua_destroy();
+    }
+    exit(1);
 }
 
 /**
@@ -53,11 +65,14 @@ pub extern "C" fn on_incoming_call(
         pjsua_call_get_info(call_id, ci.as_mut_ptr());
 
         /* Automatically answer incoming calls with 200/OK */
-        pjsua_call_answer(call_id, 200, ptr::null(), ptr::null());
+        pjsua_call_answer(call_id, 200, null(), null());
     }
 }
 
-fn on_call_state(call_id: pjsua_call_id, e: *mut pjsip_event) {
+/**
+ * on_call_state callback
+ */
+pub extern "C" fn on_call_state(call_id: pjsua_call_id, e: *mut pjsip_event) {
     let mut ci = MaybeUninit::<pjsua_call_info>::uninit();
     unsafe {
         pjsua_call_get_info(call_id, ci.as_mut_ptr());
@@ -66,8 +81,34 @@ fn on_call_state(call_id: pjsua_call_id, e: *mut pjsip_event) {
             .expect("CSTRING ERROR!");
         print_log(
             LogLevel::LogLevel1,
-            &format!("Call {} sate={}", call_id, state_text),
+            &format!("@@@@@ Call {} sate={}", call_id, state_text),
         );
+    }
+}
+
+pub extern "C" fn on_call_media_state(call_id: pjsua_call_id) {
+    let mut ci = MaybeUninit::<pjsua_call_info>::uninit();
+    unsafe {
+        pjsua_call_get_info(call_id, ci.as_mut_ptr());
+        let ci_hontai = *ci.as_ptr();
+        if ci_hontai.media_status == pjsua_call_media_status_PJSUA_CALL_MEDIA_ACTIVE {
+            pjsua_conf_connect(ci_hontai.conf_slot, 0);
+            pjsua_conf_connect(0, ci_hontai.conf_slot);
+        }
+    }
+}
+
+fn make_call(acc_id: pjsua_acc_id, uri: pj_str_t) {
+    unsafe {
+        let v = std::ptr::null_mut();
+        let mut dummy: i32 = 0;
+        {
+            let rdummy = &mut dummy;
+            let status = pjsua_call_make_call(acc_id, &uri, null(), v, null(), rdummy);
+            if status as u32 != pj_constants__PJ_SUCCESS {
+                error_exit("Error making call", status);
+            }
+        }
     }
 }
 
@@ -80,13 +121,15 @@ fn main() {
         let cfg_ptr = cfg.assume_init_mut();
 
         cfg_ptr.cb.on_incoming_call = Some(on_incoming_call);
+        cfg_ptr.cb.on_call_state = Some(on_call_state);
+        cfg_ptr.cb.on_call_media_state = Some(on_call_media_state);
 
         let mut log_cfg = MaybeUninit::<pjsua_logging_config>::uninit();
         pjsua_logging_config_default(log_cfg.as_mut_ptr());
         pj_log_set_level(5);
         let log_cfg = log_cfg.assume_init();
 
-        _status = pjsua_init(cfg_ptr, &log_cfg, ptr::null());
+        _status = pjsua_init(cfg_ptr, &log_cfg, null());
 
         let mut t_cfg = MaybeUninit::<pjsua_transport_config>::uninit();
         pjsua_transport_config_default(t_cfg.as_mut_ptr());
@@ -140,7 +183,13 @@ fn main() {
             acc_id.as_mut_ptr(),
         );
 
+        let dsturi = CString::new("sip:1002@test.u.biztel.jp").expect("CSTRING FAILED");
+        let uri = pj_str(dsturi.as_ptr() as *mut i8);
+        make_call(*acc_id.as_mut_ptr(), uri);
+
         pj_thread_sleep(10000);
+
+        print_log(LogLevel::LogLevel1, "@@@@@@@@@@ END!");
 
         /* Destroy pjsua */
         pjsua_destroy();
