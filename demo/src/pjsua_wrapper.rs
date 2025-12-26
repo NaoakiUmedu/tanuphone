@@ -145,17 +145,17 @@ pub fn make_call(acc_id: pjsua_acc_id, uri: pj_str_t) {
     }
 }
 
-pub fn account_add(user: &str, pass: &str, domein: &str) -> i32 {
+pub fn account_add(user: &str, pass: &str, domain: &str) -> i32 {
     let mut acc_id_ret: pjsua_acc_id = 0;
     unsafe {
         let mut acc_cfg = MaybeUninit::<pjsua_acc_config>::uninit();
         pjsua_acc_config_default(acc_cfg.as_mut_ptr());
         let acc_cfg_ptr = acc_cfg.assume_init_mut();
 
-        let id = CString::new(&*format!("sip:{}@{}", user, domein)).expect("CSTRING_NEW_FAILED");
+        let id = CString::new(&*format!("sip:{}@{}", user, domain)).expect("CSTRING_NEW_FAILED");
         acc_cfg_ptr.id = pj_str(id.as_ptr() as *mut i8);
 
-        let uri = CString::new(&*format!("sip:{}", domein)).expect("CSTRING_NEW_FAILED");
+        let uri = CString::new(&*format!("sip:{}", domain)).expect("CSTRING_NEW_FAILED");
         acc_cfg_ptr.reg_uri = pj_str(uri.as_ptr() as *mut i8);
 
         acc_cfg_ptr.cred_count = 1;

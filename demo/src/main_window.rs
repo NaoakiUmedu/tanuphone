@@ -3,20 +3,38 @@ use eframe::{
     epaint::text::{FontInsert, InsertFontFamily},
 };
 
+#[derive(PartialEq, Debug, Clone, Copy)]
+enum CallStatus {
+    Waiting,
+    Calling,
+    Incoming,
+    Talking,
+}
+
+#[derive(PartialEq, Debug, Clone, Copy)]
+enum ViewMode {
+    Phone,
+    Setting,
+}
+
 pub struct MainWindow {
-    id: String,
-    pass: String,
-    domein: String,
+    sip_user: String,
+    password: String,
+    domain: String,
     phone_number: String,
+    call_status: CallStatus,
+    view_mode: ViewMode,
 }
 
 impl Default for MainWindow {
     fn default() -> Self {
         Self {
-            id: "1001".to_string(),
-            pass: "p@ssw0rd".to_string(),
-            domein: "test.u.biztel.jp".to_string(),
+            sip_user: "1001".to_string(),
+            password: "p@ssw0rd".to_string(),
+            domain: "test.u.biztel.jp".to_string(),
             phone_number: "".to_string(),
+            call_status: CallStatus::Waiting,
+            view_mode: ViewMode::Phone,
         }
     }
 }
@@ -77,23 +95,53 @@ impl MainWindow {
         add_font(&cc.egui_ctx);
         Self::default()
     }
+
+    fn phone_mode_view(&mut self, ui: &mut egui::Ui) {
+        ui.vertical(|ui| {
+            ui.horizontal(|ui| {
+                ui.text_edit_singleline(&mut self.phone_number);
+                // TODO いい感じに表示する
+                ui.label(&format!("{:?}", self.call_status));
+            });
+
+            ui.horizontal(|ui| {
+                if ui.button("通話").clicked() {
+                    // TODO PJSIPを呼ぶ
+                }
+                if ui.button("切断").clicked() {
+                    // TODO PJSIPを呼ぶ
+                }
+            });
+        });
+    }
+
+    fn setting_mode_view(&mut self, ui: &mut egui::Ui) {
+        ui.vertical(|ui| {
+            let user_label = ui.label("SIP USER:");
+            ui.text_edit_singleline(&mut self.sip_user)
+                .labelled_by(user_label.id);
+            let password_label = ui.label("PASSWORD:");
+            ui.text_edit_singleline(&mut self.password)
+                .labelled_by(password_label.id);
+            let domain_label = ui.label("SIP SERVER DOMAIN:");
+            ui.text_edit_singleline(&mut self.domain)
+                .labelled_by(domain_label.id);
+        });
+    }
 }
 
 impl eframe::App for MainWindow {
     fn update(&mut self, ctx: &egui::Context, _frame: &mut eframe::Frame) {
         egui::CentralPanel::default().show(ctx, |ui| {
-            ui.vertical(|ui| {
-                ui.text_edit_singleline(&mut self.phone_number);
-
-                ui.horizontal(|ui| {
-                    if ui.button("通話").clicked() {
-                        // TODO PJSIPを呼ぶ
-                    }
-                    if ui.button("切断").clicked() {
-                        // TODO PJSIPを呼ぶ
-                    }
-                });
+            ui.horizontal(|ui| {
+                ui.label("Mode");
+                ui.radio_value(&mut self.view_mode, ViewMode::Phone, "Phone");
+                ui.radio_value(&mut self.view_mode, ViewMode::Setting, "Setting");
             });
+            match self.view_mode {
+                ViewMode::Phone => self.phone_mode_view(ui),
+                ViewMode::Setting => self.setting_mode_view(ui),
+            }
         });
     }
 }
