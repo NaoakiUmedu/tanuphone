@@ -184,17 +184,16 @@ pub fn account_add(user: &str, pass: &str, domein: &str) -> i32 {
         );
 
         acc_id_ret = *acc_id.as_mut_ptr();
-
-        //pj_thread_sleep(1000);
+        print_log(LogLevel::LogLevel1, &format!("@@@@ acc_id={}", acc_id_ret));
     }
     return acc_id_ret;
 }
 
-pub fn callto(acc: i32, uri: &str) {
+pub fn callto(caller: i32, uri: &str) {
     unsafe {
         let dsturi = CString::new(uri).expect("CSTRING FAILED");
         let uri_str = pj_str(dsturi.as_ptr() as *mut i8);
-        make_call(acc, uri_str);
+        make_call(caller, uri_str);
 
         pj_thread_sleep(10000);
 
