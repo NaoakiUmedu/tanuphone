@@ -185,7 +185,7 @@ pub fn account_add(user: &str, pass: &str, domein: &str) -> i32 {
 
         acc_id_ret = *acc_id.as_mut_ptr();
 
-        pj_thread_sleep(1000);
+        //pj_thread_sleep(1000);
     }
     return acc_id_ret;
 }
