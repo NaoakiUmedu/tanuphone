@@ -761,6 +761,7 @@ name = "demo"
 version = "0.1.0"
 dependencies = [
  "eframe",
+ "once_cell",
  "pjsua",
 ]
 

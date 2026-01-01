@@ -1,7 +1,11 @@
+use std::sync::mpsc::Receiver;
+
 use eframe::{
-    egui,
+    egui::{self, Context},
     epaint::text::{FontInsert, InsertFontFamily},
 };
+
+use crate::{message::Message, pjsua_wrapper};
 
 #[derive(PartialEq, Debug, Clone, Copy)]
 enum CallStatus {
@@ -18,25 +22,14 @@ enum ViewMode {
 }
 
 pub struct MainWindow {
-    sip_user: String,
+    my_number: String,
     password: String,
     domain: String,
-    phone_number: String,
+    to_number: String,
     call_status: CallStatus,
     view_mode: ViewMode,
-}
-
-impl Default for MainWindow {
-    fn default() -> Self {
-        Self {
-            sip_user: "1001".to_string(),
-            password: "p@ssw0rd".to_string(),
-            domain: "test.u.biztel.jp".to_string(),
-            phone_number: "".to_string(),
-            call_status: CallStatus::Waiting,
-            view_mode: ViewMode::Phone,
-        }
-    }
+    rx: Receiver<Message>,
+    debug_line: String,
 }
 
 // Demonstrates how to add a font to the existing ones
@@ -90,26 +83,36 @@ fn replace_fonts(ctx: &egui::Context) {
 }
 
 impl MainWindow {
-    pub fn new(cc: &eframe::CreationContext<'_>) -> Self {
+    pub fn new(cc: &eframe::CreationContext<'_>, rx: Receiver<Message>) -> Self {
         replace_fonts(&cc.egui_ctx);
         add_font(&cc.egui_ctx);
-        Self::default()
+        Self {
+            my_number: "1001".to_string(),
+            password: "p@ssw0rd".to_string(),
+            domain: "test.u.biztel.jp".to_string(),
+            to_number: "".to_string(),
+            call_status: CallStatus::Waiting,
+            view_mode: ViewMode::Phone,
+            rx: rx,
+            debug_line: "".to_string(),
+        }
     }
 
     fn phone_mode_view(&mut self, ui: &mut egui::Ui) {
         ui.vertical(|ui| {
             ui.horizontal(|ui| {
-                ui.text_edit_singleline(&mut self.phone_number);
+                ui.text_edit_singleline(&mut self.to_number);
                 // TODO いい感じに表示する
                 ui.label(&format!("{:?}", self.call_status));
             });
 
             ui.horizontal(|ui| {
                 if ui.button("通話").clicked() {
-                    // TODO PJSIPを呼ぶ
+                    //println!("@@@ callto {}@{}", self.to_number, self.domain);
+                    pjsua_wrapper::callto(self.to_number.parse::<i32>().unwrap(), &self.domain);
                 }
                 if ui.button("切断").clicked() {
-                    // TODO PJSIPを呼ぶ
+                    pjsua_wrapper::hangup();
                 }
             });
         });
@@ -118,7 +121,7 @@ impl MainWindow {
     fn setting_mode_view(&mut self, ui: &mut egui::Ui) {
         ui.vertical(|ui| {
             let user_label = ui.label("SIP USER:");
-            ui.text_edit_singleline(&mut self.sip_user)
+            ui.text_edit_singleline(&mut self.my_number)
                 .labelled_by(user_label.id);
             let password_label = ui.label("PASSWORD:");
             ui.text_edit_singleline(&mut self.password)
@@ -126,13 +129,26 @@ impl MainWindow {
             let domain_label = ui.label("SIP SERVER DOMAIN:");
             ui.text_edit_singleline(&mut self.domain)
                 .labelled_by(domain_label.id);
+
+            // TODO ちゃんとする
+            if ui.button("レジする").clicked() {
+                pjsua_wrapper::account_add(&self.my_number, &self.password, &self.domain);
+            }
         });
+    }
+
+    fn handle_message(&mut self, ctx: &Context) {
+        while let Ok(message) = self.rx.try_recv() {
+            self.debug_line = format!("{:?}", message.message_type);
+            ctx.request_repaint();
+        }
     }
 }
 
 impl eframe::App for MainWindow {
     fn update(&mut self, ctx: &egui::Context, _frame: &mut eframe::Frame) {
         egui::CentralPanel::default().show(ctx, |ui| {
+            ui.label(&self.debug_line);
             ui.horizontal(|ui| {
                 ui.label("Mode");
                 ui.radio_value(&mut self.view_mode, ViewMode::Phone, "Phone");
@@ -143,5 +159,11 @@ impl eframe::App for MainWindow {
                 ViewMode::Setting => self.setting_mode_view(ui),
             }
         });
+
+        self.handle_message(ctx);
+    }
+
+    fn on_exit(&mut self, _gl: Option<&eframe::glow::Context>) {
+        pjsua_wrapper::destroy();
     }
 }

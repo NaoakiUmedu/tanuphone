@@ -1,11 +1,18 @@
 use pjsua::*;
 use std::{
+    cell::OnceCell,
     ffi::{CStr, CString},
     mem::MaybeUninit,
     os::raw::c_int,
     process::exit,
     ptr::null,
+    sync::{
+        mpsc::{self, Receiver, Sender},
+        OnceLock,
+    },
 };
+
+use crate::message::Message;
 
 pub enum LogLevel {
     LogLevel1 = 0,
@@ -15,7 +22,12 @@ pub enum LogLevel {
     LogLevel5 = 4,
 }
 
-pub fn init() {
+static TX_INSTANCE: OnceLock<Sender<Message>> = OnceLock::new();
+
+pub fn init() -> Receiver<Message> {
+    let (tx, rx): (Sender<Message>, Receiver<Message>) = mpsc::channel();
+    TX_INSTANCE.set(tx);
+
     unsafe {
         let mut _status = pjsua_create();
 
@@ -54,6 +66,8 @@ pub fn init() {
 
         _status = pjsua_start();
     }
+
+    rx
 }
 
 pub fn error_exit(msg: &str, status: pj_status_t) {
@@ -205,5 +219,11 @@ pub fn destroy() {
     unsafe {
         /* Destroy pjsua */
         pjsua_destroy();
+    }
+}
+
+pub fn hangup() {
+    unsafe {
+        pjsua_call_hangup_all();
     }
 }

@@ -8,3 +8,4 @@ edition = "2021"
 [dependencies]
 pjsua = { path = "../pjsua" }
 eframe = { version ="0.33.3" }
+once_cell = { version = "1.21.3" }
