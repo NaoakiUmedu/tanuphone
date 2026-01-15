@@ -139,7 +139,7 @@ impl MainWindow {
 
     fn handle_message(&mut self, ctx: &Context) {
         while let Ok(message) = self.rx.try_recv() {
-            self.debug_line = format!("{:?}", message.message_type);
+            self.debug_line = format!("{:?}", message.message);
             ctx.request_repaint();
         }
     }

@@ -1,6 +1,5 @@
 use pjsua::*;
 use std::{
-    cell::OnceCell,
     ffi::{CStr, CString},
     mem::MaybeUninit,
     os::raw::c_int,
@@ -26,7 +25,7 @@ static TX_INSTANCE: OnceLock<Sender<Message>> = OnceLock::new();
 
 pub fn init() -> Receiver<Message> {
     let (tx, rx): (Sender<Message>, Receiver<Message>) = mpsc::channel();
-    TX_INSTANCE.set(tx);
+    let _ = TX_INSTANCE.set(tx);
 
     unsafe {
         let mut _status = pjsua_create();
@@ -45,8 +44,6 @@ pub fn init() -> Receiver<Message> {
         let mut lgcfg = *log_cfg.as_mut_ptr();
         lgcfg.log_filename = pj_str(filename.as_ptr() as *mut i8);
         pj_log_set_level(5);
-
-        //let log_cfg = log_cfg.assume_init();
 
         _status = pjsua_init(cfg_ptr, &lgcfg, null());
 
@@ -119,7 +116,7 @@ pub extern "C" fn on_incoming_call(
 /**
  * on_call_state callback
  */
-pub extern "C" fn on_call_state(call_id: pjsua_call_id, e: *mut pjsip_event) {
+pub extern "C" fn on_call_state(call_id: pjsua_call_id, _e: *mut pjsip_event) {
     let mut ci = MaybeUninit::<pjsua_call_info>::uninit();
     unsafe {
         pjsua_call_get_info(call_id, ci.as_mut_ptr());
@@ -130,6 +127,14 @@ pub extern "C" fn on_call_state(call_id: pjsua_call_id, e: *mut pjsip_event) {
             LogLevel::LogLevel1,
             &format!("@@@@@ Call {} sate={}", call_id, state_text),
         );
+        TX_INSTANCE
+            .get()
+            .unwrap()
+            .send(Message {
+                message_type: (crate::message::MessageType::OnCallState),
+                message: { state_text.to_string() },
+            })
+            .unwrap();
     }
 }
 
