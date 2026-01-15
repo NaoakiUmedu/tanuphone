@@ -238,4 +238,12 @@ pub fn hangup() {
 
 pub extern "C" fn on_reg_state2(acc_id: pjsua_acc_id, _info: *mut pjsua_reg_info) {
     println!("@@@@ on_reg_state2 acc_id = {}", acc_id);
+    TX_INSTANCE
+        .get()
+        .unwrap()
+        .send(Message {
+            message_type: (crate::message::MessageType::RegisterComplete),
+            message: ("".to_string()),
+        })
+        .unwrap();
 }

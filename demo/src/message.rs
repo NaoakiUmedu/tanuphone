@@ -4,8 +4,9 @@ pub struct Message {
     pub message: String,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Eq, PartialEq)]
 pub enum MessageType {
     OnCallState,
     OnIncomingCall,
+    RegisterComplete,
 }

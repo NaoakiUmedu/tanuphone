@@ -5,7 +5,10 @@ use eframe::{
     epaint::text::{FontInsert, InsertFontFamily},
 };
 
-use crate::{message::Message, pjsua_wrapper};
+use crate::{
+    message::{Message, MessageType},
+    pjsua_wrapper,
+};
 
 #[derive(PartialEq, Debug, Clone, Copy)]
 enum CallStatus {
@@ -30,6 +33,7 @@ pub struct MainWindow {
     view_mode: ViewMode,
     rx: Receiver<Message>,
     debug_line: String,
+    registered: bool,
 }
 
 // Demonstrates how to add a font to the existing ones
@@ -95,6 +99,7 @@ impl MainWindow {
             view_mode: ViewMode::Phone,
             rx: rx,
             debug_line: "".to_string(),
+            registered: false,
         }
     }
 
@@ -108,8 +113,10 @@ impl MainWindow {
 
             ui.horizontal(|ui| {
                 if ui.button("通話").clicked() {
-                    println!("@@@ callto {}@{}", self.to_number, self.domain);
-                    pjsua_wrapper::callto(self.to_number.parse::<i32>().unwrap(), &self.domain);
+                    if self.to_number != "" && self.domain != "" && self.registered == true {
+                        println!("@@@ callto {}@{}", self.to_number, self.domain);
+                        pjsua_wrapper::callto(self.to_number.parse::<i32>().unwrap(), &self.domain);
+                    }
                 }
                 if ui.button("切断").clicked() {
                     pjsua_wrapper::hangup();
@@ -140,6 +147,9 @@ impl MainWindow {
     fn handle_message(&mut self, ctx: &Context) {
         while let Ok(message) = self.rx.try_recv() {
             self.debug_line = format!("{:?}", message.message);
+            if message.message_type == MessageType::RegisterComplete {
+                self.registered = true;
+            }
             ctx.request_repaint();
         }
     }
