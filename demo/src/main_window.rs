@@ -108,7 +108,7 @@ impl MainWindow {
 
             ui.horizontal(|ui| {
                 if ui.button("通話").clicked() {
-                    //println!("@@@ callto {}@{}", self.to_number, self.domain);
+                    println!("@@@ callto {}@{}", self.to_number, self.domain);
                     pjsua_wrapper::callto(self.to_number.parse::<i32>().unwrap(), &self.domain);
                 }
                 if ui.button("切断").clicked() {

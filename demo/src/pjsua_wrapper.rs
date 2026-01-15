@@ -37,6 +37,7 @@ pub fn init() -> Receiver<Message> {
         cfg_ptr.cb.on_incoming_call = Some(on_incoming_call);
         cfg_ptr.cb.on_call_state = Some(on_call_state);
         cfg_ptr.cb.on_call_media_state = Some(on_call_media_state);
+        cfg_ptr.cb.on_reg_state2 = Some(on_reg_state2);
 
         let mut log_cfg = MaybeUninit::<pjsua_logging_config>::uninit();
         pjsua_logging_config_default(log_cfg.as_mut_ptr());
@@ -150,12 +151,13 @@ pub extern "C" fn on_call_media_state(call_id: pjsua_call_id) {
     }
 }
 
-pub fn make_call(acc_id: pjsua_acc_id, uri: pj_str_t) {
+pub fn make_call(uri: pj_str_t) {
     unsafe {
         let v = std::ptr::null_mut();
         let mut dummy: i32 = 0;
         {
             let rdummy = &mut dummy;
+            let acc_id: pjsua_acc_id = 0;
             let status = pjsua_call_make_call(acc_id, &uri, null(), v, null(), rdummy);
             if status as u32 != pj_constants__PJ_SUCCESS {
                 error_exit("Error making call", status);
@@ -208,11 +210,12 @@ pub fn account_add(user: &str, pass: &str, domain: &str) -> i32 {
     return acc_id_ret;
 }
 
-pub fn callto(caller: i32, uri: &str) {
+pub fn callto(callee: i32, domein: &str) {
+    let uri = format!("{}@{}", callee, domein);
     unsafe {
         let dsturi = CString::new(uri).expect("CSTRING FAILED");
         let uri_str = pj_str(dsturi.as_ptr() as *mut i8);
-        make_call(caller, uri_str);
+        make_call(uri_str);
 
         pj_thread_sleep(10000);
 
@@ -231,4 +234,8 @@ pub fn hangup() {
     unsafe {
         pjsua_call_hangup_all();
     }
+}
+
+pub extern "C" fn on_reg_state2(acc_id: pjsua_acc_id, _info: *mut pjsua_reg_info) {
+    println!("@@@@ on_reg_state2 acc_id = {}", acc_id);
 }
