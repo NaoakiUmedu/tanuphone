@@ -18,7 +18,7 @@ fn main() -> Result<(), eframe::Error> {
     //pjsua_wrapper::destroy();
     let options = eframe::NativeOptions::default();
     eframe::run_native(
-        "egui Demo",
+        "tanuphone",
         options,
         Box::new(|cc| Ok(Box::new(MainWindow::new(cc, rx)))),
     )
