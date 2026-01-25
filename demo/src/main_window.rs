@@ -91,9 +91,9 @@ impl MainWindow {
         replace_fonts(&cc.egui_ctx);
         add_font(&cc.egui_ctx);
         Self {
-            my_number: "1001".to_string(),
-            password: "p@ssw0rd".to_string(),
-            domain: "test.u.biztel.jp".to_string(),
+            my_number: "".to_string(),
+            password: "".to_string(),
+            domain: "".to_string(),
             to_number: "".to_string(),
             call_status: CallStatus::Waiting,
             view_mode: ViewMode::Phone,
@@ -114,8 +114,7 @@ impl MainWindow {
             ui.horizontal(|ui| {
                 if ui.button("通話").clicked() {
                     if self.to_number != "" && self.domain != "" && self.registered == true {
-                        println!("@@@ callto {}@{}", self.to_number, self.domain);
-                        pjsua_wrapper::callto(self.to_number.parse::<i32>().unwrap(), &self.domain);
+                        pjsua_wrapper::callto(&self.to_number, &self.domain);
                     }
                 }
                 if ui.button("切断").clicked() {

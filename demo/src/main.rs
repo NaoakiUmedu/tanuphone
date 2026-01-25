@@ -1,5 +1,4 @@
 use crate::main_window::MainWindow;
-use std::sync::mpsc;
 
 mod main_window;
 mod message;

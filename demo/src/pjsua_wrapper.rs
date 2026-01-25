@@ -210,8 +210,9 @@ pub fn account_add(user: &str, pass: &str, domain: &str) -> i32 {
     return acc_id_ret;
 }
 
-pub fn callto(callee: i32, domein: &str) {
-    let uri = format!("{}@{}", callee, domein);
+pub fn callto(callee: &str, domein: &str) {
+    let uri = format!("sip:{}@{}", callee, domein);
+    print_log(LogLevel::LogLevel1, &format!("@@@ callto {}", uri));
     unsafe {
         let dsturi = CString::new(uri).expect("CSTRING FAILED");
         let uri_str = pj_str(dsturi.as_ptr() as *mut i8);
