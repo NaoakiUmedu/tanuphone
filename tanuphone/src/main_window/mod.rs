@@ -1,4 +1,6 @@
 use std::sync::mpsc::Receiver;
+mod phone_mode_view;
+mod setting_mode_view;
 
 use eframe::{
     egui::{self, Context},
@@ -40,7 +42,7 @@ pub struct MainWindow {
 fn add_font(ctx: &egui::Context) {
     ctx.add_font(FontInsert::new(
         "my_font",
-        egui::FontData::from_static(include_bytes!("../fonts/Cica/Cica-Regular.ttf")),
+        egui::FontData::from_static(include_bytes!("../../fonts/Cica/Cica-Regular.ttf")),
         vec![
             InsertFontFamily {
                 family: egui::FontFamily::Proportional,
@@ -64,7 +66,7 @@ fn replace_fonts(ctx: &egui::Context) {
     fonts.font_data.insert(
         "my_font".to_owned(),
         std::sync::Arc::new(egui::FontData::from_static(include_bytes!(
-            "../fonts/Cica/Cica-Regular.ttf"
+            "../../fonts/Cica/Cica-Regular.ttf"
         ))),
     );
 
@@ -103,45 +105,6 @@ impl MainWindow {
         }
     }
 
-    fn phone_mode_view(&mut self, ui: &mut egui::Ui) {
-        ui.vertical(|ui| {
-            ui.horizontal(|ui| {
-                ui.text_edit_singleline(&mut self.to_number);
-                ui.label(self.get_string_from_callstatus());
-            });
-
-            ui.horizontal(|ui| {
-                if ui.button("通話").clicked() {
-                    if self.to_number != "" && self.domain != "" && self.registered == true {
-                        pjsua_wrapper::callto(&self.to_number, &self.domain);
-                    }
-                }
-                if ui.button("切断").clicked() {
-                    pjsua_wrapper::hangup();
-                }
-            });
-        });
-    }
-
-    fn setting_mode_view(&mut self, ui: &mut egui::Ui) {
-        ui.vertical(|ui| {
-            let user_label = ui.label("SIP USER:");
-            ui.text_edit_singleline(&mut self.my_number)
-                .labelled_by(user_label.id);
-            let password_label = ui.label("PASSWORD:");
-            ui.text_edit_singleline(&mut self.password)
-                .labelled_by(password_label.id);
-            let domain_label = ui.label("SIP SERVER DOMAIN:");
-            ui.text_edit_singleline(&mut self.domain)
-                .labelled_by(domain_label.id);
-
-            // TODO ちゃんとする
-            if ui.button("レジする").clicked() {
-                pjsua_wrapper::account_add(&self.my_number, &self.password, &self.domain);
-            }
-        });
-    }
-
     fn handle_message(&mut self, ctx: &Context) {
         while let Ok(message) = self.rx.try_recv() {
             if message.message_type == MessageType::RegisterComplete {
@@ -150,7 +113,10 @@ impl MainWindow {
             match message.message_type {
                 MessageType::RegisterComplete => self.on_register_complete(),
                 MessageType::OnCallState => self.on_call_state(message.message),
-                _ => print_log(pjsua_wrapper::LogLevel::LogLevel1, &format!("@@@@@ Action not defined for {:?}", message.message_type)),
+                _ => print_log(
+                    pjsua_wrapper::LogLevel::LogLevel1,
+                    &format!("@@@@@ Action not defined for {:?}", message.message_type),
+                ),
             }
             ctx.request_repaint();
         }
@@ -161,13 +127,19 @@ impl MainWindow {
     }
 
     fn on_call_state(&mut self, message: String) {
-        print_log(pjsua_wrapper::LogLevel::LogLevel1, &format!("@@@@@ received status = {}", message));
+        print_log(
+            pjsua_wrapper::LogLevel::LogLevel1,
+            &format!("@@@@@ received status = {}", message),
+        );
         match &*message {
             "DISCONNECTED" => self.call_status = CallStatus::Disconnected,
             "CALLING" => self.call_status = CallStatus::Calling,
             "CONNECTING" => self.call_status = CallStatus::Connecting,
             "CONFIRMED" => self.call_status = CallStatus::Confirmed,
-            _ => print_log(pjsua_wrapper::LogLevel::LogLevel1, &format!("@@@@@ Action not defined for {}", message)),
+            _ => print_log(
+                pjsua_wrapper::LogLevel::LogLevel1,
+                &format!("@@@@@ Action not defined for {}", message),
+            ),
         }
         self.debug_line = message;
     }
@@ -193,8 +165,8 @@ impl eframe::App for MainWindow {
                 ui.radio_value(&mut self.view_mode, ViewMode::Setting, "Setting");
             });
             match self.view_mode {
-                ViewMode::Phone => self.phone_mode_view(ui),
-                ViewMode::Setting => self.setting_mode_view(ui),
+                ViewMode::Phone => phone_mode_view::phone_mode_view(self, ui),
+                ViewMode::Setting => setting_mode_view::setting_mode_view(self, ui),
             }
         });
 
