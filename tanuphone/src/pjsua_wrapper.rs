@@ -44,7 +44,7 @@ pub fn init() -> Receiver<Message> {
         let filename = CString::new("log.log").expect("CSTRING NEW ERROR");
         let mut lgcfg = *log_cfg.as_mut_ptr();
         lgcfg.log_filename = pj_str(filename.as_ptr() as *mut i8);
-        pj_log_set_level(5);
+        pj_log_set_level(1);
 
         _status = pjsua_init(cfg_ptr, &lgcfg, null());
 

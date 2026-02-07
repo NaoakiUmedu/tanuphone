@@ -7,15 +7,15 @@ use eframe::{
 
 use crate::{
     message::{Message, MessageType},
-    pjsua_wrapper,
+    pjsua_wrapper::{self, print_log},
 };
 
 #[derive(PartialEq, Debug, Clone, Copy)]
 enum CallStatus {
-    Waiting,
+    Disconnected,
     Calling,
-    Incoming,
-    Talking,
+    Connecting,
+    Confirmed,
 }
 
 #[derive(PartialEq, Debug, Clone, Copy)]
@@ -95,7 +95,7 @@ impl MainWindow {
             password: "".to_string(),
             domain: "".to_string(),
             to_number: "".to_string(),
-            call_status: CallStatus::Waiting,
+            call_status: CallStatus::Disconnected,
             view_mode: ViewMode::Phone,
             rx: rx,
             debug_line: "".to_string(),
@@ -107,8 +107,7 @@ impl MainWindow {
         ui.vertical(|ui| {
             ui.horizontal(|ui| {
                 ui.text_edit_singleline(&mut self.to_number);
-                // TODO いい感じに表示する
-                ui.label(&format!("{:?}", self.call_status));
+                ui.label(self.get_string_from_callstatus());
             });
 
             ui.horizontal(|ui| {
@@ -145,11 +144,41 @@ impl MainWindow {
 
     fn handle_message(&mut self, ctx: &Context) {
         while let Ok(message) = self.rx.try_recv() {
-            self.debug_line = format!("{:?}", message.message);
             if message.message_type == MessageType::RegisterComplete {
                 self.registered = true;
             }
+            match message.message_type {
+                MessageType::RegisterComplete => self.on_register_complete(),
+                MessageType::OnCallState => self.on_call_state(message.message),
+                _ => print_log(pjsua_wrapper::LogLevel::LogLevel1, &format!("@@@@@ Action not defined for {:?}", message.message_type)),
+            }
             ctx.request_repaint();
+        }
+    }
+
+    fn on_register_complete(&mut self) {
+        self.registered = true;
+    }
+
+    fn on_call_state(&mut self, message: String) {
+        print_log(pjsua_wrapper::LogLevel::LogLevel1, &format!("@@@@@ received status = {}", message));
+        match &*message {
+            "DISCONNECTED" => self.call_status = CallStatus::Disconnected,
+            "CALLING" => self.call_status = CallStatus::Calling,
+            "CONNECTING" => self.call_status = CallStatus::Connecting,
+            "CONFIRMED" => self.call_status = CallStatus::Confirmed,
+            _ => print_log(pjsua_wrapper::LogLevel::LogLevel1, &format!("@@@@@ Action not defined for {}", message)),
+        }
+        self.debug_line = message;
+    }
+
+    fn get_string_from_callstatus(&mut self) -> String {
+        match self.call_status {
+            CallStatus::Disconnected => "".to_string(),
+            CallStatus::Calling => "発信中/着信中".to_string(),
+            CallStatus::Connecting => "発信中/着信中".to_string(),
+            CallStatus::Confirmed => "通話中".to_string(),
+            _ => "".to_string(),
         }
     }
 }
