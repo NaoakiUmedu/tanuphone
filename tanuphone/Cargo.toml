@@ -9,3 +9,5 @@ edition = "2021"
 pjsua = { path = "../pjsua" }
 eframe = { version ="0.33.3" }
 once_cell = { version = "1.21.3" }
+serde = { version = "1", features = ["derive"] }
+serde_json = {version = "1"}

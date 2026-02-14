@@ -3,10 +3,7 @@ use crate::main_window::MainWindow;
 mod main_window;
 mod message;
 mod pjsua_wrapper;
-
-const SIP_USER: &str = "1001";
-const SIP_PASSWD: &str = "p@ssw0rd";
-const SIP_DOMAIN: &str = "test.u.biztel.jp";
+mod setting;
 
 fn main() -> Result<(), eframe::Error> {
     let rx = pjsua_wrapper::init();

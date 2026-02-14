@@ -1,6 +1,7 @@
 use crate::pjsua_wrapper;
 use crate::MainWindow;
 use eframe::egui;
+use crate::setting;
 
 pub fn setting_mode_view(main: &mut MainWindow, ui: &mut egui::Ui) {
     ui.vertical(|ui| {
@@ -18,5 +19,23 @@ pub fn setting_mode_view(main: &mut MainWindow, ui: &mut egui::Ui) {
         if ui.button("レジする").clicked() {
             pjsua_wrapper::account_add(&main.my_number, &main.password, &main.domain);
         }
+
+        if ui.button("保存").clicked() {
+            save(main);
+        }
     });
+}
+
+fn save(main: &mut MainWindow) {
+    let settings = setting::Settings {settings: vec![
+        setting::Setting {
+            user : main.my_number.clone(),
+            password : main.password.clone(),
+            domain: main.domain.clone(),
+        }
+    ]};
+    match setting::write_file(settings) {
+        Ok(_) => main.debug_line = "Save OK".to_string(),
+        Err(_) => main.debug_line = "Save NG".to_string(),
+    }
 }
