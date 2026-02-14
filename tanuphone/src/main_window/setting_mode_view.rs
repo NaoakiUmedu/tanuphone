@@ -39,3 +39,17 @@ fn save(main: &mut MainWindow) {
         Err(_) => main.debug_line = "Save NG".to_string(),
     }
 }
+
+pub fn load(main: &mut MainWindow) {
+    if let Ok(settings) = setting::read_file() {
+        // TODO とりあえず1端末だけ管理する
+        if settings.settings.len() >= 1 {
+            main.my_number = settings.settings[0].user.clone();
+            main.password = settings.settings[0].password.clone();
+            main.domain = settings.settings[0].domain.clone();
+            return;
+        }
+    }
+    pjsua_wrapper::print_log(pjsua_wrapper::LogLevel::LogLevel1, "No setting found");
+
+}

@@ -1,6 +1,7 @@
 use std::sync::mpsc::Receiver;
 mod phone_mode_view;
 mod setting_mode_view;
+use crate::setting;
 
 use eframe::{
     egui::{self, Context},
@@ -92,7 +93,7 @@ impl MainWindow {
     pub fn new(cc: &eframe::CreationContext<'_>, rx: Receiver<Message>) -> Self {
         replace_fonts(&cc.egui_ctx);
         add_font(&cc.egui_ctx);
-        Self {
+        let mut me = Self {
             my_number: "".to_string(),
             password: "".to_string(),
             domain: "".to_string(),
@@ -102,7 +103,12 @@ impl MainWindow {
             rx: rx,
             debug_line: "".to_string(),
             registered: false,
+        };
+        setting_mode_view::load(&mut me);
+        if me.my_number != "" && me.password != "" && me.domain != "" {
+            pjsua_wrapper::account_add(&me.my_number, &me.password, &me.domain);
         }
+        me
     }
 
     fn handle_message(&mut self, ctx: &Context) {
