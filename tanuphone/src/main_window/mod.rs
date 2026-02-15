@@ -1,4 +1,5 @@
 use std::sync::mpsc::Receiver;
+use crate::usecases;
 mod phone_mode_view;
 mod setting_mode_view;
 
@@ -7,10 +8,8 @@ use eframe::{
     epaint::text::{FontInsert, InsertFontFamily},
 };
 
-use crate::{
-    message::{Message, MessageType},
-    pjsua_wrapper::{self, PjsuaImpl, TPjsuaWrapper, print_log},
-};
+use crate::message::{Message, MessageType};
+use crate::pjsua_wrapper::{self, print_log, TPjsuaWrapper};
 
 #[derive(PartialEq, Debug, Clone, Copy)]
 enum CallStatus {
@@ -108,8 +107,7 @@ impl MainWindow {
         };
         setting_mode_view::load(&mut me);
         if me.my_number != "" && me.password != "" && me.domain != "" {
-            me.pjsua
-                .account_add(&me.my_number, &me.password, &me.domain);
+            usecases::account_add::account_add(&me.my_number, &me.password, &me.domain, &me.pjsua);
         }
         me
     }

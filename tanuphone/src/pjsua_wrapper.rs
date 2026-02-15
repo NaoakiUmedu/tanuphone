@@ -8,6 +8,7 @@ use std::{
     sync::{
         mpsc::{self, Receiver, Sender},
         OnceLock,
+        Mutex
     },
 };
 
@@ -259,4 +260,53 @@ fn error_exit(msg: &str, status: pj_status_t) {
         pjsua_destroy();
     }
     exit(1);
+}
+
+#[cfg(test)]
+pub mod test_util {
+    use super::*;
+
+    #[derive(Clone)]
+    pub struct TestAccount {
+        pub user: String,
+        pub pass: String,
+        pub domain: String,
+    }
+    pub struct PjsuaStub {
+    }
+    pub fn get_added_accounts() -> Vec<TestAccount> {
+        let v = TEST_ACCOUNTS.lock().unwrap();
+        v.clone()
+    }
+
+    static TEST_TX_INSTANCE: OnceLock<Sender<Message>> = OnceLock::new();
+    static TEST_ACCOUNTS: Mutex<Vec<TestAccount>> = Mutex::new(Vec::new());
+
+    impl TPjsuaWrapper for PjsuaStub {
+        fn init(&self) -> Receiver<Message> {
+            let (tx, rx): (Sender<Message>, Receiver<Message>) = mpsc::channel();
+            let _ = TEST_TX_INSTANCE.set(tx);
+
+            rx
+        }
+        fn make_call(&self, _uri: pj_str_t) {
+            // do nothing
+        }
+        fn account_add(&self, _user: &str, _pass: &str, _domain: &str) -> i32 {
+            let acc = TestAccount { user: _user.to_string(), pass: _pass.to_string(), domain: _domain.to_string() };
+            let mut v = TEST_ACCOUNTS.lock().unwrap();
+            v.push(acc);
+
+            v.len() as i32
+        }
+        fn callto(&self, _callee: &str, _domein: &str) {
+            //
+        }
+        fn destroy(&self) {
+            // do nothing
+        }
+        fn hangup(&self) {
+            // do nothing
+        }
+    }
 }
