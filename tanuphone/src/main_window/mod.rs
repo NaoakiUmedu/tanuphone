@@ -1,7 +1,6 @@
 use std::sync::mpsc::Receiver;
 mod phone_mode_view;
 mod setting_mode_view;
-use crate::setting;
 
 use eframe::{
     egui::{self, Context},
@@ -10,7 +9,7 @@ use eframe::{
 
 use crate::{
     message::{Message, MessageType},
-    pjsua_wrapper::{self, print_log},
+    pjsua_wrapper::{self, print_log, PjsuaImpl, TPjsuaWrapper},
 };
 
 #[derive(PartialEq, Debug, Clone, Copy)]
@@ -37,6 +36,7 @@ pub struct MainWindow {
     rx: Receiver<Message>,
     debug_line: String,
     registered: bool,
+    pjsua: PjsuaImpl,
 }
 
 // Demonstrates how to add a font to the existing ones
@@ -90,7 +90,8 @@ fn replace_fonts(ctx: &egui::Context) {
 }
 
 impl MainWindow {
-    pub fn new(cc: &eframe::CreationContext<'_>, rx: Receiver<Message>) -> Self {
+    pub fn new(cc: &eframe::CreationContext<'_>, pj: pjsua_wrapper::PjsuaImpl) -> Self {
+        let rx = pj.init();
         replace_fonts(&cc.egui_ctx);
         add_font(&cc.egui_ctx);
         let mut me = Self {
@@ -103,10 +104,12 @@ impl MainWindow {
             rx: rx,
             debug_line: "".to_string(),
             registered: false,
+            pjsua: pj,
         };
         setting_mode_view::load(&mut me);
         if me.my_number != "" && me.password != "" && me.domain != "" {
-            pjsua_wrapper::account_add(&me.my_number, &me.password, &me.domain);
+            me.pjsua
+                .account_add(&me.my_number, &me.password, &me.domain);
         }
         me
     }
@@ -180,6 +183,6 @@ impl eframe::App for MainWindow {
     }
 
     fn on_exit(&mut self, _gl: Option<&eframe::glow::Context>) {
-        pjsua_wrapper::destroy();
+        self.pjsua.destroy();
     }
 }

@@ -1,8 +1,6 @@
+use crate::pjsua_wrapper::TPjsuaWrapper;
 use crate::MainWindow;
-use crate::pjsua_wrapper;
-use eframe::{
-    egui,
-};
+use eframe::egui;
 
 pub fn phone_mode_view(main: &mut MainWindow, ui: &mut egui::Ui) {
     ui.vertical(|ui| {
@@ -14,11 +12,11 @@ pub fn phone_mode_view(main: &mut MainWindow, ui: &mut egui::Ui) {
         ui.horizontal(|ui| {
             if ui.button("通話").clicked() {
                 if main.to_number != "" && main.domain != "" && main.registered == true {
-                    pjsua_wrapper::callto(&main.to_number, &main.domain);
+                    main.pjsua.callto(&main.to_number, &main.domain);
                 }
             }
             if ui.button("切断").clicked() {
-                pjsua_wrapper::hangup();
+                main.pjsua.hangup();
             }
         });
     });
