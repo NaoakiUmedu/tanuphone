@@ -1,5 +1,4 @@
 use crate::pjsua_wrapper;
-use crate::pjsua_wrapper::TPjsuaWrapper;
 use crate::setting;
 use crate::MainWindow;
 use eframe::egui;

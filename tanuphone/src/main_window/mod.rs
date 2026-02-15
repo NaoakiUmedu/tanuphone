@@ -120,9 +120,9 @@ impl MainWindow {
             match message.message_type {
                 MessageType::RegisterComplete => self.on_register_complete(),
                 MessageType::OnCallState => self.on_call_state(message.message),
-                _ => print_log(
+                MessageType::OnIncomingCall => print_log(
                     pjsua_wrapper::LogLevel::LogLevel1,
-                    &format!("@@@@@ Action not defined for {:?}", message.message_type),
+                    &format!("@@@@@ Action not defined for {:?} (message){}", message.message_type, message.message),
                 ),
             }
             ctx.request_repaint();
@@ -157,7 +157,6 @@ impl MainWindow {
             CallStatus::Calling => "発信中/着信中".to_string(),
             CallStatus::Connecting => "発信中/着信中".to_string(),
             CallStatus::Confirmed => "通話中".to_string(),
-            _ => "".to_string(),
         }
     }
 }

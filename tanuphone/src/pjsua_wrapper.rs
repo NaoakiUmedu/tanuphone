@@ -1,4 +1,5 @@
 use pjsua::*;
+#[allow(unused_imports)]    // なんかMutexが認識されない
 use std::{
     ffi::{CStr, CString},
     mem::MaybeUninit,
@@ -7,12 +8,14 @@ use std::{
     ptr::null,
     sync::{
         mpsc::{self, Receiver, Sender},
-        Mutex, OnceLock,
+        Mutex,
+        OnceLock,
     },
 };
 
 use crate::message::Message;
 
+#[allow(dead_code)]
 pub enum LogLevel {
     LogLevel1 = 0,
     LogLevel2 = 1,
@@ -96,6 +99,7 @@ impl TPjsuaWrapper for PjsuaImpl {
         rx
     }
 
+    #[allow(unused_assignments)]
     fn account_add(&self, user: &str, pass: &str, domain: &str) -> i32 {
         let mut acc_id_ret: i32 = 0;
         unsafe {
@@ -191,6 +195,15 @@ pub extern "C" fn on_incoming_call(
     let mut ci = MaybeUninit::<pjsua_call_info>::uninit();
     unsafe {
         pjsua_call_get_info(call_id, ci.as_mut_ptr());
+
+        TX_INSTANCE
+            .get()
+            .unwrap()
+            .send(Message {
+                message_type: (crate::message::MessageType::OnIncomingCall),
+                message: { "INCOMING!".to_string() },
+            })
+            .unwrap();
 
         /* Automatically answer incoming calls with 200/OK */
         pjsua_call_answer(call_id, 200, null(), null());
