@@ -9,7 +9,7 @@ use eframe::{
 
 use crate::{
     message::{Message, MessageType},
-    pjsua_wrapper::{self, print_log, PjsuaImpl, TPjsuaWrapper},
+    pjsua_wrapper::{self, PjsuaImpl, TPjsuaWrapper, print_log},
 };
 
 #[derive(PartialEq, Debug, Clone, Copy)]
@@ -36,7 +36,7 @@ pub struct MainWindow {
     rx: Receiver<Message>,
     debug_line: String,
     registered: bool,
-    pjsua: PjsuaImpl,
+    pjsua: Box<dyn TPjsuaWrapper>,
 }
 
 // Demonstrates how to add a font to the existing ones
@@ -90,7 +90,7 @@ fn replace_fonts(ctx: &egui::Context) {
 }
 
 impl MainWindow {
-    pub fn new(cc: &eframe::CreationContext<'_>, pj: pjsua_wrapper::PjsuaImpl) -> Self {
+    pub fn new<T: 'static>(cc: &eframe::CreationContext<'_>, pj: T) -> Self where T: TPjsuaWrapper {
         let rx = pj.init();
         replace_fonts(&cc.egui_ctx);
         add_font(&cc.egui_ctx);
@@ -104,7 +104,7 @@ impl MainWindow {
             rx: rx,
             debug_line: "".to_string(),
             registered: false,
-            pjsua: pj,
+            pjsua: Box::new(pj),
         };
         setting_mode_view::load(&mut me);
         if me.my_number != "" && me.password != "" && me.domain != "" {
