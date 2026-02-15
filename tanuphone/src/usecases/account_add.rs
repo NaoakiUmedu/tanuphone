@@ -24,5 +24,7 @@ mod test {
         assert_eq!("@1001", accs[0].pass);
         assert_eq!("test.invalid", accs[0].domain);
         assert_eq!("1002", accs[1].user);
+
+        pjsua_stub.destroy();
     }
 }

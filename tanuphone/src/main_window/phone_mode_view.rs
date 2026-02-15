@@ -1,5 +1,5 @@
-use crate::pjsua_wrapper::TPjsuaWrapper;
 use crate::MainWindow;
+use crate::usecases;
 use eframe::egui;
 
 pub fn phone_mode_view(main: &mut MainWindow, ui: &mut egui::Ui) {
@@ -12,7 +12,7 @@ pub fn phone_mode_view(main: &mut MainWindow, ui: &mut egui::Ui) {
         ui.horizontal(|ui| {
             if ui.button("通話").clicked() {
                 if main.to_number != "" && main.domain != "" && main.registered == true {
-                    main.pjsua.callto(&main.to_number, &main.domain);
+                    usecases::callto::callto(&main.to_number, &main.domain, &main.pjsua);
                 }
             }
             if ui.button("切断").clicked() {
