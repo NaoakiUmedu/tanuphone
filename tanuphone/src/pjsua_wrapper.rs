@@ -25,7 +25,6 @@ static TX_INSTANCE: OnceLock<Sender<Message>> = OnceLock::new();
 
 pub trait TPjsuaWrapper {
     fn init(&self) -> Receiver<Message>;
-    fn make_call(&self, uri: pj_str_t);
     fn account_add(&self, user: &str, pass: &str, domain: &str) -> i32;
     fn callto(&self, callee: &str, domein: &str);
     fn destroy(&self);
@@ -33,6 +32,23 @@ pub trait TPjsuaWrapper {
 }
 
 pub(crate) struct PjsuaImpl {}
+
+impl PjsuaImpl {
+    fn make_call(&self, uri: pj_str_t) {
+        unsafe {
+            let v = std::ptr::null_mut();
+            let mut dummy: i32 = 0;
+            {
+                let rdummy = &mut dummy;
+                let acc_id: pjsua_acc_id = 0;
+                let status = pjsua_call_make_call(acc_id, &uri, null(), v, null(), rdummy);
+                if status as u32 != pj_constants__PJ_SUCCESS {
+                    error_exit("Error making call", status);
+                }
+            }
+        }
+    }
+}
 
 impl TPjsuaWrapper for PjsuaImpl {
     fn init(&self) -> Receiver<Message> {
@@ -78,21 +94,6 @@ impl TPjsuaWrapper for PjsuaImpl {
         }
 
         rx
-    }
-
-    fn make_call(&self, uri: pj_str_t) {
-        unsafe {
-            let v = std::ptr::null_mut();
-            let mut dummy: i32 = 0;
-            {
-                let rdummy = &mut dummy;
-                let acc_id: pjsua_acc_id = 0;
-                let status = pjsua_call_make_call(acc_id, &uri, null(), v, null(), rdummy);
-                if status as u32 != pj_constants__PJ_SUCCESS {
-                    error_exit("Error making call", status);
-                }
-            }
-        }
     }
 
     fn account_add(&self, user: &str, pass: &str, domain: &str) -> i32 {
@@ -296,9 +297,6 @@ pub mod test_util {
             let _ = TEST_TX_INSTANCE.set(tx);
 
             rx
-        }
-        fn make_call(&self, _uri: pj_str_t) {
-            // do nothing
         }
         fn account_add(&self, user: &str, pass: &str, domain: &str) -> i32 {
             let acc = TestAccount {
