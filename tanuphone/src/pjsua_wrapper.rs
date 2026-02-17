@@ -328,10 +328,11 @@ pub mod test_util {
             });
         }
         fn destroy(&self) {
-            // do nothing
+            TEST_ACCOUNTS.lock().unwrap().clear();
+            TEST_CALLS.lock().unwrap().clear();
         }
         fn hangup(&self) {
-            // do nothing
+            TEST_CALLS.lock().unwrap().clear();
         }
     }
 }

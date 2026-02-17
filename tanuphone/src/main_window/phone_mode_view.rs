@@ -16,7 +16,7 @@ pub fn phone_mode_view(main: &mut MainWindow, ui: &mut egui::Ui) {
                 }
             }
             if ui.button("切断").clicked() {
-                main.pjsua.hangup();
+                usecases::hangup::hangup(&main.pjsua);
             }
         });
     });
