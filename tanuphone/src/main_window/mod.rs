@@ -180,6 +180,6 @@ impl eframe::App for MainWindow {
     }
 
     fn on_exit(&mut self, _gl: Option<&eframe::glow::Context>) {
-        self.pjsua.destroy();
+        usecases::destroy::destroy(&self.pjsua);
     }
 }
