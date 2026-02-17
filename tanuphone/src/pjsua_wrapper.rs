@@ -179,6 +179,10 @@ pub extern "C" fn on_call_media_state(call_id: pjsua_call_id) {
         if ci_hontai.media_status == pjsua_call_media_status_PJSUA_CALL_MEDIA_ACTIVE {
             pjsua_conf_connect(ci_hontai.conf_slot, 0);
             pjsua_conf_connect(0, ci_hontai.conf_slot);
+            send_message_event(Message {
+                message_type: (crate::message::MessageType::OnCallMediaStateActive),
+                message: {"".to_string()}
+            });
         }
     }
 }
@@ -196,14 +200,10 @@ pub extern "C" fn on_incoming_call(
     unsafe {
         pjsua_call_get_info(call_id, ci.as_mut_ptr());
 
-        TX_INSTANCE
-            .get()
-            .unwrap()
-            .send(Message {
-                message_type: (crate::message::MessageType::OnIncomingCall),
-                message: { "INCOMING!".to_string() },
-            })
-            .unwrap();
+        send_message_event(Message {
+            message_type: (crate::message::MessageType::OnIncomingCall),
+            message: { "INCOMING!".to_string() },
+        });
 
         /* Automatically answer incoming calls with 200/OK */
         pjsua_call_answer(call_id, 200, null(), null());
@@ -224,27 +224,19 @@ pub extern "C" fn on_call_state(call_id: pjsua_call_id, _e: *mut pjsip_event) {
             LogLevel::LogLevel1,
             &format!("@@@@@ Call {} sate={}", call_id, state_text),
         );
-        TX_INSTANCE
-            .get()
-            .unwrap()
-            .send(Message {
-                message_type: (crate::message::MessageType::OnCallState),
-                message: { state_text.to_string() },
-            })
-            .unwrap();
+        send_message_event(Message {
+            message_type: (crate::message::MessageType::OnCallState),
+            message: { state_text.to_string() },
+        });
     }
 }
 
 pub extern "C" fn on_reg_state2(acc_id: pjsua_acc_id, _info: *mut pjsua_reg_info) {
     println!("@@@@ on_reg_state2 acc_id = {}", acc_id);
-    TX_INSTANCE
-        .get()
-        .unwrap()
-        .send(Message {
-            message_type: (crate::message::MessageType::RegisterComplete),
-            message: ("".to_string()),
-        })
-        .unwrap();
+    send_message_event(Message {
+        message_type: (crate::message::MessageType::RegisterComplete),
+        message: ("".to_string()),
+    });
 }
 
 /**
@@ -335,4 +327,12 @@ pub mod test_util {
             TEST_CALLS.lock().unwrap().clear();
         }
     }
+}
+
+fn send_message_event(message: Message) {
+    TX_INSTANCE
+        .get()
+        .unwrap()
+        .send(message)
+        .unwrap();
 }

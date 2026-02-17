@@ -9,4 +9,5 @@ pub enum MessageType {
     OnCallState,
     OnIncomingCall,
     RegisterComplete,
+    OnCallMediaStateActive,
 }

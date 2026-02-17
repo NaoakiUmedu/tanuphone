@@ -17,6 +17,7 @@ enum CallStatus {
     Calling,
     Connecting,
     Confirmed,
+    TALKING,
 }
 
 #[derive(PartialEq, Debug, Clone, Copy)]
@@ -124,6 +125,9 @@ impl MainWindow {
                     pjsua_wrapper::LogLevel::LogLevel1,
                     &format!("@@@@@ Action not defined for {:?} (message){}", message.message_type, message.message),
                 ),
+                MessageType::OnCallMediaStateActive => {
+                    self.call_status = CallStatus::TALKING;
+                }
             }
             ctx.request_repaint();
         }
@@ -156,7 +160,8 @@ impl MainWindow {
             CallStatus::Disconnected => "".to_string(),
             CallStatus::Calling => "発信中/着信中".to_string(),
             CallStatus::Connecting => "発信中/着信中".to_string(),
-            CallStatus::Confirmed => "通話中".to_string(),
+            CallStatus::Confirmed => "発信中/着信中".to_string(),
+            CallStatus::TALKING => "通話中".to_string(),
         }
     }
 }

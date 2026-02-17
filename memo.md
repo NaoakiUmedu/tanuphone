@@ -8,7 +8,7 @@
 - [ ] 複数端末で動かす
 - [ ] テストを書く(重要)
   - [x] 画面 -> PJSUA
-  - [ ] PJSUA -> 画面
+  - [ ] PJSUA -> 画面 <- これ、画面のテスト書かないとできないよね？
 - [ ] アイコンを付ける
 
 ```mermaid
@@ -20,7 +20,8 @@ stateDiagram-v2
     [*] --> Null
     Null --> CONNECTING : On INVITE recieved
     CONNECTING --> CONFIRMED : On ACK for INVITE recieved
-    CONFIRMED --> DISCONNECTED : On 200 OK for BYE received
+    CONFIRMED --> TALKING : On Media Active
+    TALKING --> DISCONNECTED : On 200 OK for BYE received
 
 ```
 
@@ -33,8 +34,8 @@ stateDiagram-v2
     [*] --> Null
     Null --> CALLING : On INVITE send
     CALLING --> CONNECTING : On 200 OK for INVITE recieved
-    CONNECTING --> CONFIRMED : On 200 ACK for INVITE recieved
-    CONFIRMED --> DISCONNECTED : On 200 OK for BYE received
+    CONNECTING --> TALKING : On Media Active
+    TALKING --> DISCONNECTED : On 200 OK for BYE received
 
 ```
 
@@ -45,6 +46,7 @@ stateDiagram-v2
 |CALLING|CALLING|
 |CONNECTING|CONNECTING|
 |CONFIRMED|CONFIRMED|
+|TALKING|CONFIRMED(Media Active)|
 
 # メモ
 MainWindowのmodは実態を持ち、それ以下のメソッドがt_pjsua_wrapperを受け取り、依存性注入する
