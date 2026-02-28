@@ -32,6 +32,7 @@ pub trait TPjsuaWrapper {
     fn callto(&self, callee: &str, domein: &str);
     fn destroy(&self);
     fn hangup(&self);
+    fn answer(&self, call_id_i32: i32);
 }
 
 pub(crate) struct PjsuaImpl {}
@@ -169,6 +170,13 @@ impl TPjsuaWrapper for PjsuaImpl {
             pjsua_call_hangup_all();
         }
     }
+
+    fn answer(&self, call_id_i32: i32) {
+        let call_id: pjsua_call_id = std::os::raw::c_int::from_be(call_id_i32);
+        unsafe {
+            pjsua_call_answer(call_id, 200, null(), null());
+        }
+    }
 }
 
 pub extern "C" fn on_call_media_state(call_id: pjsua_call_id) {
@@ -200,13 +208,12 @@ pub extern "C" fn on_incoming_call(
     unsafe {
         pjsua_call_get_info(call_id, ci.as_mut_ptr());
 
+        let call_id_i32 :i32 = call_id.to_be();
+
         send_message_event(Message {
             message_type: (crate::message::MessageType::OnIncomingCall),
-            message: { "INCOMING!".to_string() },
+            message: { call_id_i32.to_string() },
         });
-
-        /* Automatically answer incoming calls with 200/OK */
-        pjsua_call_answer(call_id, 200, null(), null());
     }
 }
 
@@ -325,6 +332,9 @@ pub mod test_util {
         }
         fn hangup(&self) {
             TEST_CALLS.lock().unwrap().clear();
+        }
+        fn answer(&self, call_id_i32: i32) {
+            // do nothing
         }
     }
 }

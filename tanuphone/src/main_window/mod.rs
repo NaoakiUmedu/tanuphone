@@ -1,5 +1,5 @@
-use std::sync::mpsc::Receiver;
 use crate::usecases;
+use std::sync::mpsc::Receiver;
 mod phone_mode_view;
 mod setting_mode_view;
 
@@ -37,6 +37,8 @@ pub struct MainWindow {
     debug_line: String,
     registered: bool,
     pjsua: Box<dyn TPjsuaWrapper>,
+    is_incomming: bool,
+    incomming_call_id: i32,
 }
 
 // Demonstrates how to add a font to the existing ones
@@ -90,7 +92,10 @@ fn replace_fonts(ctx: &egui::Context) {
 }
 
 impl MainWindow {
-    pub fn new<T: 'static>(cc: &eframe::CreationContext<'_>, pj: T) -> Self where T: TPjsuaWrapper {
+    pub fn new<T: 'static>(cc: &eframe::CreationContext<'_>, pj: T) -> Self
+    where
+        T: TPjsuaWrapper,
+    {
         let rx = pj.init();
         replace_fonts(&cc.egui_ctx);
         add_font(&cc.egui_ctx);
@@ -105,6 +110,8 @@ impl MainWindow {
             debug_line: "".to_string(),
             registered: false,
             pjsua: Box::new(pj),
+            is_incomming: false,
+            incomming_call_id: -1,
         };
         setting_mode_view::load(&mut me);
         if me.my_number != "" && me.password != "" && me.domain != "" {
@@ -121,10 +128,17 @@ impl MainWindow {
             match message.message_type {
                 MessageType::RegisterComplete => self.on_register_complete(),
                 MessageType::OnCallState => self.on_call_state(message.message),
-                MessageType::OnIncomingCall => print_log(
-                    pjsua_wrapper::LogLevel::LogLevel1,
-                    &format!("@@@@@ Action not defined for {:?} (message){}", message.message_type, message.message),
-                ),
+                MessageType::OnIncomingCall => {
+                    print_log(
+                        pjsua_wrapper::LogLevel::LogLevel1,
+                        &format!(
+                            "@@@@@ Action not defined for {:?} (message){}",
+                            message.message_type, message.message
+                        ),
+                    );
+                    self.is_incomming = true;
+                    self.incomming_call_id = message.message.parse().unwrap();
+                }
                 MessageType::OnCallMediaStateActive => {
                     self.call_status = CallStatus::TALKING;
                 }
@@ -169,7 +183,10 @@ impl MainWindow {
 impl eframe::App for MainWindow {
     fn update(&mut self, ctx: &egui::Context, _frame: &mut eframe::Frame) {
         egui::CentralPanel::default().show(ctx, |ui| {
-            ui.label(&self.debug_line);
+            ui.horizontal(|ui| {
+                ui.label(&self.debug_line);
+                ui.label(if self.is_incomming { "着信中" } else {""});
+            });
             ui.horizontal(|ui| {
                 ui.label("Mode");
                 ui.radio_value(&mut self.view_mode, ViewMode::Phone, "Phone");

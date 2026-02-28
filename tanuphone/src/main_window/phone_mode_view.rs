@@ -1,5 +1,5 @@
-use crate::MainWindow;
 use crate::usecases;
+use crate::MainWindow;
 use eframe::egui;
 
 pub fn phone_mode_view(main: &mut MainWindow, ui: &mut egui::Ui) {
@@ -11,8 +11,14 @@ pub fn phone_mode_view(main: &mut MainWindow, ui: &mut egui::Ui) {
 
         ui.horizontal(|ui| {
             if ui.button("通話").clicked() {
-                if main.to_number != "" && main.domain != "" && main.registered == true {
-                    usecases::callto::callto(&main.to_number, &main.domain, &main.pjsua);
+                if main.is_incomming {
+                    usecases::answer::answer(main.incomming_call_id, &main.pjsua);
+                    main.incomming_call_id = -1;
+                    main.is_incomming = false;
+                } else {
+                    if main.to_number != "" && main.domain != "" && main.registered == true {
+                        usecases::callto::callto(&main.to_number, &main.domain, &main.pjsua);
+                    }
                 }
             }
             if ui.button("切断").clicked() {
