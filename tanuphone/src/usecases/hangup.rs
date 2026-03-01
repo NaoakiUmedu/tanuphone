@@ -6,7 +6,7 @@ pub fn hangup(pjsua: &Box<dyn TPjsuaWrapper>) {
 
 #[cfg(test)]
 mod test {
-    use crate::{pjsua_wrapper::{self, test_util::{self, PjsuaStub, TestCallState}}, usecases};
+    use crate::{pjsua_wrapper::{self, test_util::{self, PjsuaStub}}, usecases};
     use super::*;
 
     #[test]

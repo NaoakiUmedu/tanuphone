@@ -7,7 +7,7 @@ pub fn answer(call_id_i32: i32, pjsua: &Box<dyn TPjsuaWrapper>) {
 // TODO ユニットテストで着信を模擬する仕組みを作る
 #[cfg(test)]
 mod test {
-    use crate::pjsua_wrapper::{self, test_util::{self, PjsuaStub}};
+    use crate::pjsua_wrapper::{test_util::{self, PjsuaStub}};
     use super::*;
 
     #[test]
