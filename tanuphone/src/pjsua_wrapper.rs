@@ -276,6 +276,7 @@ fn error_exit(msg: &str, status: pj_status_t) {
 #[cfg(test)]
 pub mod test_util {
     use super::*;
+    use std::sync::atomic::AtomicI32;
 
     pub struct PjsuaStub {}
 
@@ -309,7 +310,11 @@ pub mod test_util {
     pub fn get_incomming_calls() -> Vec<TestCall> {
         TEST_CALLS_INCOMMING.lock().unwrap().clone()
     }
-    pub fn make_incoming(call_id: i32) {
+    /**
+     * @returns call_id
+     */
+    pub fn make_incoming() -> i32 {
+        let call_id = get_and_increment_call_id_max();
         TEST_CALLS_INCOMMING.lock().unwrap().push(TestCall {
             call_id: call_id,
             callee: "".to_string(),
@@ -317,6 +322,10 @@ pub mod test_util {
             state: TestCallState::Incomming,
         });
         // 面倒なのでcall_idの管理はテストケース側でやる(いいでしょイベント飛ばす処理かかなくて...)
+        call_id
+    }
+    fn get_and_increment_call_id_max()-> i32 {
+       TEST_CALLS_INCOMMING.lock().unwrap().len() as i32
     }
 
     static TEST_TX_INSTANCE: OnceLock<Sender<Message>> = OnceLock::new();

@@ -15,11 +15,11 @@ mod test {
         let pjsua_stub : Box<dyn TPjsuaWrapper> = Box::new(PjsuaStub {});
         pjsua_stub.init();
 
-        test_util::make_incoming(0);
+        let call_id = test_util::make_incoming();
         let call = test_util::get_incomming_calls()[0].clone();
         assert_eq!(test_util::TestCallState::Incomming, call.state);
 
-        answer(0, &pjsua_stub);
+        answer(call_id, &pjsua_stub);
         let call = test_util::get_incomming_calls()[0].clone();
         assert_eq!(test_util::TestCallState::Talking, call.state);
 
