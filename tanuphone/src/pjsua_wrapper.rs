@@ -276,7 +276,6 @@ fn error_exit(msg: &str, status: pj_status_t) {
 #[cfg(test)]
 pub mod test_util {
     use super::*;
-    use std::sync::atomic::AtomicI32;
 
     pub struct PjsuaStub {}
 
@@ -304,18 +303,15 @@ pub mod test_util {
         pub domain: String,
         pub state: TestCallState,
     }
-    pub fn get_outgoing_calls() -> Vec<TestCall> {
-        TEST_CALLS_OUTGOING.lock().unwrap().clone()
-    }
-    pub fn get_incomming_calls() -> Vec<TestCall> {
-        TEST_CALLS_INCOMMING.lock().unwrap().clone()
+    pub fn get_calls() -> Vec<TestCall> {
+        TEST_CALLS.lock().unwrap().clone()
     }
     /**
      * @returns call_id
      */
     pub fn make_incoming() -> i32 {
         let call_id = get_and_increment_call_id_max();
-        TEST_CALLS_INCOMMING.lock().unwrap().push(TestCall {
+        TEST_CALLS.lock().unwrap().push(TestCall {
             call_id: call_id,
             callee: "".to_string(),
             domain: "".to_string(),
@@ -325,13 +321,12 @@ pub mod test_util {
         call_id
     }
     fn get_and_increment_call_id_max()-> i32 {
-       TEST_CALLS_INCOMMING.lock().unwrap().len() as i32
+       TEST_CALLS.lock().unwrap().len() as i32
     }
 
     static TEST_TX_INSTANCE: OnceLock<Sender<Message>> = OnceLock::new();
     static TEST_ACCOUNTS: Mutex<Vec<TestAccount>> = Mutex::new(Vec::new());
-    static TEST_CALLS_OUTGOING: Mutex<Vec<TestCall>> = Mutex::new(Vec::new());
-    static TEST_CALLS_INCOMMING: Mutex<Vec<TestCall>> = Mutex::new(Vec::new());
+    static TEST_CALLS: Mutex<Vec<TestCall>> = Mutex::new(Vec::new());
 
     impl TPjsuaWrapper for PjsuaStub {
         fn init(&self) -> Receiver<Message> {
@@ -351,8 +346,9 @@ pub mod test_util {
             TEST_ACCOUNTS.lock().unwrap().len() as i32
         }
         fn callto(&self, callee: &str, domain: &str) {
-            TEST_CALLS_OUTGOING.lock().unwrap().push(TestCall {
-                call_id: 0,
+            let call_id = get_and_increment_call_id_max();
+            TEST_CALLS.lock().unwrap().push(TestCall {
+                call_id: call_id,
                 callee: callee.to_string(),
                 domain: domain.to_string(),
                 state: TestCallState::OutGoing,
@@ -360,16 +356,16 @@ pub mod test_util {
         }
         fn destroy(&self) {
             TEST_ACCOUNTS.lock().unwrap().clear();
-            TEST_CALLS_OUTGOING.lock().unwrap().clear();
+            TEST_CALLS.lock().unwrap().clear();
         }
         fn hangup(&self) {
-            TEST_CALLS_OUTGOING.lock().unwrap().clear();
+            TEST_CALLS.lock().unwrap().clear();
         }
         fn answer(&self, call_id_i32: i32) {
-            let len = TEST_CALLS_INCOMMING.lock().unwrap().len();
+            let len = TEST_CALLS.lock().unwrap().len();
             for i in 0..len {
-                if TEST_CALLS_INCOMMING.lock().unwrap()[i].call_id == call_id_i32 {
-                    TEST_CALLS_INCOMMING.lock().unwrap()[i].state = TestCallState::Talking;
+                if TEST_CALLS.lock().unwrap()[i].call_id == call_id_i32 {
+                    TEST_CALLS.lock().unwrap()[i].state = TestCallState::Talking;
                     break;
                 }
             }

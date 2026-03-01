@@ -16,11 +16,11 @@ mod test {
         pjsua_stub.init();
 
         let call_id = test_util::make_incoming();
-        let call = test_util::get_incomming_calls()[0].clone();
+        let call = test_util::get_calls()[0].clone();
         assert_eq!(test_util::TestCallState::Incomming, call.state);
 
         answer(call_id, &pjsua_stub);
-        let call = test_util::get_incomming_calls()[0].clone();
+        let call = test_util::get_calls()[0].clone();
         assert_eq!(test_util::TestCallState::Talking, call.state);
 
         pjsua_stub.destroy();

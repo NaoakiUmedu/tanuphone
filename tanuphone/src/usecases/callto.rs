@@ -6,7 +6,7 @@ pub fn callto(callee: &str, domein: &str, pjsua: &Box<dyn TPjsuaWrapper>) {
 
 #[cfg(test)]
 mod test {
-    use crate::pjsua_wrapper::{self, test_util::PjsuaStub};
+    use crate::pjsua_wrapper::{self, test_util::{self, PjsuaStub}};
     use super::*;
 
     #[test]
@@ -16,10 +16,11 @@ mod test {
 
         callto("1002", "test.invalid", &pjsua_stub);
 
-        let calls = pjsua_wrapper::test_util::get_outgoing_calls();
+        let calls = pjsua_wrapper::test_util::get_calls();
         assert_eq!(calls.len(), 1);
         assert_eq!("1002".to_string(), calls[0].callee);
         assert_eq!("test.invalid".to_string(), calls[0].domain);
+        assert_eq!(test_util::TestCallState::OutGoing, calls[0].state);
 
         pjsua_stub.destroy();
     }
