@@ -1,5 +1,5 @@
 use pjsua::*;
-#[allow(unused_imports)]    // なんかMutexが認識されない
+#[allow(unused_imports)] // なんかMutexが認識されない
 use std::{
     ffi::{CStr, CString},
     mem::MaybeUninit,
@@ -8,8 +8,7 @@ use std::{
     ptr::null,
     sync::{
         mpsc::{self, Receiver, Sender},
-        Mutex,
-        OnceLock,
+        Mutex, OnceLock,
     },
 };
 
@@ -189,7 +188,7 @@ pub extern "C" fn on_call_media_state(call_id: pjsua_call_id) {
             pjsua_conf_connect(0, ci_hontai.conf_slot);
             send_message_event(Message {
                 message_type: (crate::message::MessageType::OnCallMediaStateActive),
-                message: {"".to_string()}
+                message: { "".to_string() },
             });
         }
     }
@@ -208,7 +207,7 @@ pub extern "C" fn on_incoming_call(
     unsafe {
         pjsua_call_get_info(call_id, ci.as_mut_ptr());
 
-        let call_id_i32 :i32 = call_id.to_be();
+        let call_id_i32: i32 = call_id.to_be();
 
         send_message_event(Message {
             message_type: (crate::message::MessageType::OnIncomingCall),
@@ -290,18 +289,40 @@ pub mod test_util {
         TEST_ACCOUNTS.lock().unwrap().clone()
     }
 
+    #[derive(Clone, Debug, Eq, PartialEq)]
+    pub enum TestCallState {
+        OutGoing,
+        Incomming,
+        Talking,
+    }
+
     #[derive(Clone)]
     pub struct TestCall {
+        pub call_id: i32,
         pub callee: String,
         pub domain: String,
+        pub state: TestCallState,
     }
-    pub fn get_calls() -> Vec<TestCall> {
-        TEST_CALLS.lock().unwrap().clone()
+    pub fn get_outgoing_calls() -> Vec<TestCall> {
+        TEST_CALLS_OUTGOING.lock().unwrap().clone()
+    }
+    pub fn get_incomming_calls() -> Vec<TestCall> {
+        TEST_CALLS_INCOMMING.lock().unwrap().clone()
+    }
+    pub fn make_incoming(call_id: i32) {
+        TEST_CALLS_INCOMMING.lock().unwrap().push(TestCall {
+            call_id: call_id,
+            callee: "".to_string(),
+            domain: "".to_string(),
+            state: TestCallState::Incomming,
+        });
+        // 面倒なのでcall_idの管理はテストケース側でやる(いいでしょイベント飛ばす処理かかなくて...)
     }
 
     static TEST_TX_INSTANCE: OnceLock<Sender<Message>> = OnceLock::new();
     static TEST_ACCOUNTS: Mutex<Vec<TestAccount>> = Mutex::new(Vec::new());
-    static TEST_CALLS: Mutex<Vec<TestCall>> = Mutex::new(Vec::new());
+    static TEST_CALLS_OUTGOING: Mutex<Vec<TestCall>> = Mutex::new(Vec::new());
+    static TEST_CALLS_INCOMMING: Mutex<Vec<TestCall>> = Mutex::new(Vec::new());
 
     impl TPjsuaWrapper for PjsuaStub {
         fn init(&self) -> Receiver<Message> {
@@ -321,28 +342,32 @@ pub mod test_util {
             TEST_ACCOUNTS.lock().unwrap().len() as i32
         }
         fn callto(&self, callee: &str, domain: &str) {
-            TEST_CALLS.lock().unwrap().push(TestCall {
+            TEST_CALLS_OUTGOING.lock().unwrap().push(TestCall {
+                call_id: 0,
                 callee: callee.to_string(),
                 domain: domain.to_string(),
+                state: TestCallState::OutGoing,
             });
         }
         fn destroy(&self) {
             TEST_ACCOUNTS.lock().unwrap().clear();
-            TEST_CALLS.lock().unwrap().clear();
+            TEST_CALLS_OUTGOING.lock().unwrap().clear();
         }
         fn hangup(&self) {
-            TEST_CALLS.lock().unwrap().clear();
+            TEST_CALLS_OUTGOING.lock().unwrap().clear();
         }
         fn answer(&self, call_id_i32: i32) {
-            // do nothing
+            let len = TEST_CALLS_INCOMMING.lock().unwrap().len();
+            for i in 0..len {
+                if TEST_CALLS_INCOMMING.lock().unwrap()[i].call_id == call_id_i32 {
+                    TEST_CALLS_INCOMMING.lock().unwrap()[i].state = TestCallState::Talking;
+                    break;
+                }
+            }
         }
     }
 }
 
 fn send_message_event(message: Message) {
-    TX_INSTANCE
-        .get()
-        .unwrap()
-        .send(message)
-        .unwrap();
+    TX_INSTANCE.get().unwrap().send(message).unwrap();
 }

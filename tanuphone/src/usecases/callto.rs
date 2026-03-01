@@ -16,7 +16,7 @@ mod test {
 
         callto("1002", "test.invalid", &pjsua_stub);
 
-        let calls = pjsua_wrapper::test_util::get_calls();
+        let calls = pjsua_wrapper::test_util::get_outgoing_calls();
         assert_eq!(calls.len(), 1);
         assert_eq!("1002".to_string(), calls[0].callee);
         assert_eq!("test.invalid".to_string(), calls[0].domain);

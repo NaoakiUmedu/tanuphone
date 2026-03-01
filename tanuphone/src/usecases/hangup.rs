@@ -17,14 +17,14 @@ mod test {
         usecases::account_add::account_add("1001", "@1001", "test.invalid", &pjsua_stub);
         usecases::callto::callto("1002", "test.invalid", &pjsua_stub);
 
-        let calls = pjsua_wrapper::test_util::get_calls();
+        let calls = pjsua_wrapper::test_util::get_outgoing_calls();
         assert_eq!(calls.len(), 1);
         assert_eq!("1002".to_string(), calls[0].callee);
         assert_eq!("test.invalid".to_string(), calls[0].domain);
 
         hangup(&pjsua_stub);
 
-        let calls = pjsua_wrapper::test_util::get_calls();
+        let calls = pjsua_wrapper::test_util::get_outgoing_calls();
         assert_eq!(calls.len(), 0);
 
         pjsua_stub.destroy();
