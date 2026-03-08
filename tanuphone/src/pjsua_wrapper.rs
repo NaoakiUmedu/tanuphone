@@ -77,8 +77,13 @@ impl TPjsuaWrapper for PjsuaImpl {
             let mut lgcfg = *log_cfg.as_mut_ptr();
             lgcfg.log_filename = pj_str(filename.as_ptr() as *mut i8);
             pj_log_set_level(1);
+            let mut media_config = MaybeUninit::<pjsua_media_config>::uninit();
+            pjsua_media_config_default(media_config.as_mut_ptr());
+            let mdacfg = media_config.assume_init_mut();
+            mdacfg.clock_rate = 16000;
+            mdacfg.channel_count = 1;
 
-            _status = pjsua_init(cfg_ptr, &lgcfg, null());
+            _status = pjsua_init(cfg_ptr, &lgcfg, mdacfg);
 
             let mut t_cfg = MaybeUninit::<pjsua_transport_config>::uninit();
             pjsua_transport_config_default(t_cfg.as_mut_ptr());
@@ -390,23 +395,23 @@ pub fn init_ringtone_player() -> RingtonePortInfo {
     unsafe {
         let wav = CString::new("wav").expect("CSTRING NEW ERROR");
         let pool = pjsua_pool_create(wav.as_ptr() as *mut i8, 4000, 4000);
-        let mut file_port = MaybeUninit::<pjmedia_port>::uninit();
+        let mut file_port : *mut pjmedia_port = std::ptr::null_mut();
         let mut file_slot: i32 = 0;
 
-        let ringtone_file = CString::new("../sounds/ringtone.wav").expect("CSTRING NEW ERROR");
+        let ringtone_file = CString::new("sounds/ringtone.wav").expect("CSTRING NEW ERROR");
         let c_status = pjmedia_wav_player_port_create(
             pool,
             ringtone_file.as_ptr() as *mut i8,
             0,
             0,
             0,
-            &mut file_port.as_mut_ptr(),
+            &mut file_port,
         );
         if c_status != pj_constants__PJ_SUCCESS as i32 {
             error_exit("Error creating WAV player port", c_status);
         }
 
-        let a_status = pjsua_conf_add_port(pool, file_port.as_mut_ptr(), &mut file_slot);
+        let a_status = pjsua_conf_add_port(pool, file_port, &mut file_slot);
         if a_status != pj_constants__PJ_SUCCESS as i32 {
             error_exit("Error adding port to conference", c_status);
         }
@@ -414,7 +419,7 @@ pub fn init_ringtone_player() -> RingtonePortInfo {
         RingtonePortInfo {
             ring_on: (0),
             ring_slot: (file_slot),
-            ring_port: (file_port.as_mut_ptr()),
+            ring_port: (file_port),
             pool: (pool),
         }
     }
@@ -438,7 +443,7 @@ pub fn start_ring(ringtone_port_info: &mut RingtonePortInfo) -> pj_status_t {
 }
 
 pub fn stop_ring(ringtone_port_onfo: &mut RingtonePortInfo) -> pj_status_t {
-    if !ringtone_port_onfo.ring_on != 1 {
+    if ringtone_port_onfo.ring_on != 1 {
         print_log(LogLevel::LogLevel1 , "Ringtone port already disconnected");
         return pj_constants__PJ_SUCCESS as i32;
     }
