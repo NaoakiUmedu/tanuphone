@@ -7,7 +7,6 @@ use eframe::{
     egui::{self, Context},
     epaint::text::{FontInsert, InsertFontFamily},
 };
-use pjsua::PJSUA_UNPUBLISH_MAX_WAIT_TIME_MSEC;
 
 use crate::message::{Message, MessageType};
 use crate::pjsua_wrapper::{self, print_log, TPjsuaWrapper};
@@ -178,8 +177,11 @@ impl MainWindow {
         if self.is_incomming {
             return "着信中".to_string();
         }
-        if self.call_status == CallStatus::TALKING {
+        else if self.call_status == CallStatus::TALKING {
             return "通話中".to_string();
+        }
+        else {
+            return "".to_string();
         }
         "".to_string()
     }

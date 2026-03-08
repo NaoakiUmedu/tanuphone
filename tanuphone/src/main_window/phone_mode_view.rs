@@ -30,6 +30,8 @@ pub fn phone_mode_view(main: &mut MainWindow, ui: &mut egui::Ui) {
             }
             if ui.button("切断").clicked() {
                 usecases::hangup::hangup(&main.pjsua);
+                main.is_incomming = false;
+                pjsua_wrapper::stop_ring(&mut main.ringtone);
             }
         });
     });
