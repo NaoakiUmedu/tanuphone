@@ -1,4 +1,4 @@
-use crate::usecases;
+use crate::{pjsua_wrapper::RingtonePortInfo, usecases};
 use std::sync::mpsc::Receiver;
 mod phone_mode_view;
 mod setting_mode_view;
@@ -7,6 +7,7 @@ use eframe::{
     egui::{self, Context},
     epaint::text::{FontInsert, InsertFontFamily},
 };
+use pjsua::PJSUA_UNPUBLISH_MAX_WAIT_TIME_MSEC;
 
 use crate::message::{Message, MessageType};
 use crate::pjsua_wrapper::{self, print_log, TPjsuaWrapper};
@@ -39,6 +40,7 @@ pub struct MainWindow {
     pjsua: Box<dyn TPjsuaWrapper>,
     is_incomming: bool,
     incomming_call_id: i32,
+    ringtone: RingtonePortInfo
 }
 
 // Demonstrates how to add a font to the existing ones
@@ -99,6 +101,7 @@ impl MainWindow {
         let rx = pj.init();
         replace_fonts(&cc.egui_ctx);
         add_font(&cc.egui_ctx);
+        let ringtone = pjsua_wrapper::init_ringtone_player();
         let mut me = Self {
             my_number: "".to_string(),
             password: "".to_string(),
@@ -112,6 +115,7 @@ impl MainWindow {
             pjsua: Box::new(pj),
             is_incomming: false,
             incomming_call_id: -1,
+            ringtone: ringtone
         };
         setting_mode_view::load(&mut me);
         if me.my_number != "" && me.password != "" && me.domain != "" {
@@ -138,6 +142,7 @@ impl MainWindow {
                     );
                     self.is_incomming = true;
                     self.incomming_call_id = message.message.parse().unwrap();
+                    pjsua_wrapper::start_ring(&mut self.ringtone);
                 }
                 MessageType::OnCallMediaStateActive => {
                     self.call_status = CallStatus::TALKING;
@@ -170,23 +175,20 @@ impl MainWindow {
     }
 
     fn get_string_from_callstatus(&mut self) -> String {
-        match self.call_status {
-            CallStatus::Disconnected => "".to_string(),
-            CallStatus::Calling => "発信中/着信中".to_string(),
-            CallStatus::Connecting => "発信中/着信中".to_string(),
-            CallStatus::Confirmed => "発信中/着信中".to_string(),
-            CallStatus::TALKING => "通話中".to_string(),
+        if self.is_incomming {
+            return "着信中".to_string();
         }
+        if self.call_status == CallStatus::TALKING {
+            return "通話中".to_string();
+        }
+        "".to_string()
     }
 }
 
 impl eframe::App for MainWindow {
     fn update(&mut self, ctx: &egui::Context, _frame: &mut eframe::Frame) {
         egui::CentralPanel::default().show(ctx, |ui| {
-            ui.horizontal(|ui| {
-                ui.label(&self.debug_line);
-                ui.label(if self.is_incomming { "着信中" } else {""});
-            });
+            ui.label(&self.debug_line);
             ui.horizontal(|ui| {
                 ui.label("Mode");
                 ui.radio_value(&mut self.view_mode, ViewMode::Phone, "Phone");
