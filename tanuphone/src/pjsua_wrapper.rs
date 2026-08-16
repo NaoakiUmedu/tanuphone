@@ -33,6 +33,7 @@ pub trait TPjsuaWrapper {
     fn destroy(&self);
     fn hangup(&self);
     fn answer(&self, call_id_i32: i32);
+    fn hold(&self, call_id_i32: i32);
 }
 
 pub(crate) struct PjsuaImpl {}
@@ -182,6 +183,13 @@ impl TPjsuaWrapper for PjsuaImpl {
             pjsua_call_answer(call_id, 200, null(), null());
         }
     }
+
+    fn hold(&self, call_id_i32: i32) {
+        let call_id: pjsua_call_id = std::os::raw::c_int::from_be(call_id_i32);
+        unsafe {
+            pjsua::pjsua_call_set_hold(call_id, null());
+        }
+    }
 }
 
 pub extern "C" fn on_call_media_state(call_id: pjsua_call_id) {
@@ -300,6 +308,7 @@ pub mod test_util {
         OutGoing,
         Incomming,
         Talking,
+        Holding,
     }
 
     #[derive(Clone)]
@@ -323,7 +332,7 @@ pub mod test_util {
             domain: "".to_string(),
             state: TestCallState::Incomming,
         });
-        // 面倒なのでcall_idの管理はテストケース側でやる(いいでしょイベント飛ばす処理かかなくて...)
+        // コールIDの管理は(本物の呼び出しと同様)呼び出し側が行う
         call_id
     }
     fn get_and_increment_call_id_max() -> i32 {
@@ -376,6 +385,15 @@ pub mod test_util {
                 }
             }
         }
+        fn hold(&self, call_id_i32: i32) {
+            let len = TEST_CALLS.lock().unwrap().len();
+            for i in 0..len {
+                if TEST_CALLS.lock().unwrap()[i].call_id == call_id_i32 {
+                    TEST_CALLS.lock().unwrap()[i].state = TestCallState::Holding;
+                    break;
+                }
+            }
+        }
     }
 }
 
@@ -387,7 +405,7 @@ fn send_message_event(message: Message) {
 pub struct RingtonePortInfo {
     ring_on: i32,
     ring_slot: i32,
-    ring_port: *mut  pjmedia_port,
+    ring_port: *mut pjmedia_port,
     pool: *mut pj_pool_t,
 }
 
@@ -395,7 +413,7 @@ pub fn init_ringtone_player() -> RingtonePortInfo {
     unsafe {
         let wav = CString::new("wav").expect("CSTRING NEW ERROR");
         let pool = pjsua_pool_create(wav.as_ptr() as *mut i8, 4000, 4000);
-        let mut file_port : *mut pjmedia_port = std::ptr::null_mut();
+        let mut file_port: *mut pjmedia_port = std::ptr::null_mut();
         let mut file_slot: i32 = 0;
 
         let ringtone_file = CString::new("sounds/ringtone.wav").expect("CSTRING NEW ERROR");
@@ -444,7 +462,7 @@ pub fn start_ring(ringtone_port_info: &mut RingtonePortInfo) -> pj_status_t {
 
 pub fn stop_ring(ringtone_port_onfo: &mut RingtonePortInfo) -> pj_status_t {
     if ringtone_port_onfo.ring_on != 1 {
-        print_log(LogLevel::LogLevel1 , "Ringtone port already disconnected");
+        print_log(LogLevel::LogLevel1, "Ringtone port already disconnected");
         return pj_constants__PJ_SUCCESS as i32;
     }
 
