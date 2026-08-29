@@ -1,0 +1,6 @@
+[env]
+# PjsuaStubのTestCallの配列がシングルトンになっており並列に実行するとバグる
+# (PjsuaStubのプロパティにしようと思ったが、そうするとPjsuaWrapperの中から呼び出したり、
+# test_utilの関数の引数にPjsuaStubを指定できな(? 呼び出しもとはdyn PjsuaWrapperとしか認識していないため)かったりする)
+# まあ別に今はテスト速度で困ってないので直列実行する
+RUST_TEST_THREADS = "1"
